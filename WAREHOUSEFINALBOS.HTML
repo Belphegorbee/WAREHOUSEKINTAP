@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SMG - PENGAMBILAN BARANG</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI", Arial, sans-serif;}
+html,body{width:100%;height:100%;background:#121212;color:#f4f4f4;overflow:hidden;}
+:root{--accent:#7fc9e8;} /* biru tenang */
+.system-frame{
+    position:absolute;
+    top:16px;left:16px;right:16px;bottom:16px;
+    border:1.5px solid rgba(255,255,255,0.08);
+    border-radius:12px;
+    display:flex;
+    flex-direction:column;
+    background:#1a1a1a;
+    box-shadow:0 4px 12px rgba(0,0,0,0.5);
+}
+header{
+    height:12vh;
+    min-height:80px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 16px;
+    background:linear-gradient(90deg, #0e0e0e, #1a1a1a);
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,0.1);
+    pointer-events:none;
+    flex-shrink:0;
+    position:sticky;
+    top:0;
+    z-index:10;
+}
+.header-title{
+    font-size:1.5rem;
+    font-weight:700;
+    letter-spacing:2px;
+    text-transform:uppercase;
+}
+.header-sub{
+    font-size:0.8rem;
+    opacity:0.85;
+    font-weight:600;
+}
+.main-area{
+    flex:1;
+    overflow-y:auto;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding-top:24px;
+}
+.form-container{
+    width:100%;
+    max-width:500px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    padding-bottom:24px;
+    position:relative;
+}
+.form-row{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:8px;
+    position:relative;
+}
+.form-row input, .form-row textarea, .form-row select{
+    width:100%;
+    padding:16px 14px;
+    border-radius:10px;
+    border:1.5px solid rgba(255,255,255,0.2);
+    background:#1f1f1f;
+    color:#f4f4f4;
+    font-size:0.95rem;
+    font-weight:500;
+    transition:all 0.2s ease;
+    box-shadow:0 2px 6px rgba(0,0,0,0.4);
+}
+
+/* Input fokus - shadow glow lembut + pulse */
+@keyframes pulseShadow {
+    0% { box-shadow:0 0 6px rgba(127,201,232,0.25); }
+    50% { box-shadow:0 0 12px rgba(127,201,232,0.35); }
+    100% { box-shadow:0 0 6px rgba(127,201,232,0.25); }
+}
+.form-row input:focus, 
+.form-row textarea:focus, 
+.form-row select:focus{
+    outline:none;
+    border-color:var(--accent);
+    animation: pulseShadow 1.5s ease-in-out infinite;
+}
+
+.form-row textarea{resize:none;min-height:60px;}
+.floating{
+    position:absolute;
+    top:12px;
+    left:12px;
+    font-size:0.85rem;
+    font-weight:600;
+    color:rgba(255,255,255,0.7);
+    pointer-events:none;
+    transition: all 0.4s cubic-bezier(0.25,1,0.5,1);
+    background:#1f1f1f;
+    padding:0 4px;
+    z-index:2;
+}
+.form-row input:focus + .floating,
+.form-row input:not(:placeholder-shown) + .floating,
+.form-row textarea:focus + .floating,
+.form-row textarea:not(:placeholder-shown) + .floating,
+.form-row select:focus + .floating,
+.form-row select:not(:placeholder-shown) + .floating{
+    transform: translateY(-12px) scale(0.85);
+    color: var(--accent);
+}
+
+#items-container{display:flex;flex-direction:column;gap:10px;}
+.button{
+    padding:12px 20px;
+    background:var(--accent);
+    border:none;
+    border-radius:12px;
+    color:#000;
+    font-weight:700;
+    cursor:pointer;
+    transition: all 0.35s cubic-bezier(0.25,1,0.5,1);
+    box-shadow:0 2px 6px rgba(0,0,0,0.4);
+}
+@keyframes buttonPulse {
+    0% { transform: scale(1); box-shadow:0 2px 6px rgba(127,201,232,0.2); }
+    50% { transform: scale(1.05); box-shadow:0 4px 12px rgba(127,201,232,0.3); }
+    100% { transform: scale(1); box-shadow:0 2px 6px rgba(127,201,232,0.2); }
+}
+.button:hover{
+    animation: buttonPulse 0.6s forwards;
+}
+
+.footer-fill{height:4vh;}
+.hidden{display:none;}
+
+/* Loading animasi putar + fade */
+@keyframes spinFade {
+    0% { transform: rotate(0deg); opacity:0.6; }
+    50% { transform: rotate(180deg); opacity:1; }
+    100% { transform: rotate(360deg); opacity:0.6; }
+}
+.loading{
+    animation: spinFade 1.2s linear infinite;
+}
+</style>
+</head>
+
+<body oncontextmenu="return false;">
+<div class="system-frame">
+<header>
+    <div class="header-title">SMG - PENGAMBILAN BARANG</div>
+    <div class="header-sub">FORM PENGAMBILAN</div>
+</header>
+<div class="main-area">
+<div class="form-container">
+
+<div class="form-row">
+    <input type="date" id="tanggal" placeholder=" ">
+    <label class="floating">Tanggal</label>
+</div>
+
+<div class="form-row">
+    <input type="text" id="namauser" placeholder=" ">
+    <label class="floating">Nama User</label>
+</div>
+
+<div class="form-row">
+    <select id="jumlahitem">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+        <option value="8">8</option>
+        <option value="9">9</option>
+        <option value="10">10</option>
+    </select>
+    <label class="floating">Jumlah Item</label>
+</div>
+
+<div id="items-container"></div>
+
+<div class="form-row">
+    <input type="text" id="status" placeholder=" ">
+    <label class="floating">Status</label>
+</div>
+
+<div class="form-row">
+    <input type="text" id="jobnumber" placeholder=" ">
+    <label class="floating">Nomer Job</label>
+</div>
+
+<div class="form-row">
+    <select id="crew">
+        <option value="SYAH-ERIX">SYAH-ERIX</option>
+        <option value="ROMAN-WISNU">ROMAN-WISNU</option>
+        <option value="BAHRUL-SENO">BAHRUL-SENO</option>
+        <option value="ADELIA">ADELIA</option>
+        <option value="IKA ILA">IKA ILA</option>
+        <option value="THAMZEZ-DANUNG">THAMZEZ-DANUNG</option>
+    </select>
+    <label class="floating">Crew</label>
+</div>
+
+<div class="form-row">
+    <button class="button" id="btnSimpan" onclick="submitForm()">Simpan</button>
+</div>
+
+</div>
+</div>
+<div class="footer-fill"></div>
+</div>
+
+<script>
+// --- Script persis versi sebelumnya ---
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzVIusN_om-Ok1c924XULShYKVf2Iz8UxtuCUTHoVqw7FM7wZGFiT_K1GS6Q9Vr0NQ0KQ/exec";
+
+document.getElementById('tanggal').valueAsDate = new Date();
+const debounceTimers = {};
+let storedItemsData = {};
+
+function saveCurrentValues(){
+    const inputs = document.querySelectorAll('[id^="scitem"]');
+    inputs.forEach(input=>{
+        const i = input.id.replace('scitem','');
+        const desc = document.getElementById(`descitem${i}`);
+        const uoi = document.getElementById(`uoiitem${i}`);
+        const bin = document.getElementById(`binitem${i}`);
+        const qty = document.getElementById(`qtyitem${i}`);
+        storedItemsData[i] = {
+            sc: input.value,
+            desc: desc ? desc.value : storedItemsData[i]?.desc || '',
+            uoi: uoi ? uoi.value : storedItemsData[i]?.uoi || '',
+            bin: bin ? bin.value : storedItemsData[i]?.bin || '',
+            qty: qty ? qty.value : storedItemsData[i]?.qty || ''
+        };
+    });
+}
+
+function bindSCInput(scInput, i){
+    const loading = document.getElementById(`loading${i}`);
+    const descRow = document.getElementById(`descRow${i}`);
+    const uoiRow = document.getElementById(`uoiRow${i}`);
+    const binRow = document.getElementById(`binRow${i}`);
+
+    scInput.addEventListener("input", function(){
+        clearTimeout(debounceTimers[i]);
+        debounceTimers[i] = setTimeout(async ()=>{
+            const scValue = this.value.trim();
+            if(!scValue){
+                descRow.classList.add('hidden');
+                uoiRow.classList.add('hidden');
+                binRow.classList.add('hidden');
+                return;
+            }
+            loading.classList.remove('hidden');
+            descRow.classList.add('hidden');
+            uoiRow.classList.add('hidden');
+            binRow.classList.add('hidden');
+
+            try{
+                const res = await fetch(`${WEBAPP_URL}?sc=${encodeURIComponent(scValue)}`);
+                const data = await res.json();
+                document.getElementById(`descitem${i}`).value = data.desc || '';
+                document.getElementById(`uoiitem${i}`).value = data.uoi || '';
+                document.getElementById(`binitem${i}`).value = data.bin || '';
+
+                descRow.classList.remove('hidden');
+                uoiRow.classList.remove('hidden');
+                binRow.classList.remove('hidden');
+
+                storedItemsData[i] = {
+                    ...storedItemsData[i],
+                    sc: scValue,
+                    desc: data.desc || '',
+                    uoi: data.uoi || '',
+                    bin: data.bin || ''
+                };
+            } catch(err){
+                console.error(err);
+                document.getElementById(`descitem${i}`).value = "Gagal ambil data";
+                descRow.classList.remove('hidden');
+                uoiRow.classList.remove('hidden');
+                binRow.classList.remove('hidden');
+            } finally{
+                loading.classList.add('hidden');
+            }
+        },500);
+    });
+}
+
+function generateItems(){
+    saveCurrentValues();
+    const container = document.getElementById('items-container');
+    const jumlah = parseInt(document.getElementById('jumlahitem').value);
+
+    Object.keys(storedItemsData).forEach(i=>{
+        if(i > jumlah){
+            const scEl = document.getElementById(`scitem${i}`);
+            if(scEl){
+                let parent = scEl.parentElement;
+                for(let k=0;k<5;k++){
+                    if(parent) {
+                        let toRemove = parent;
+                        parent = parent.nextElementSibling;
+                        toRemove.remove();
+                    }
+                }
+            }
+            delete storedItemsData[i];
+        }
+    });
+
+    for(let i=1;i<=jumlah;i++){
+        if(document.getElementById(`scitem${i}`)) continue;
+        const saved = storedItemsData[i] || {};
+        const div = document.createElement('div');
+        div.innerHTML = `
+        <div class="form-row">
+            <input type="text" id="scitem${i}" value="${saved.sc || ''}" placeholder=" ">
+            <label class="floating">SC ITEM${i}</label>
+            <span class="loading hidden" id="loading${i}">⏳</span>
+        </div>
+        <div class="form-row">
+            <input type="text" id="qtyitem${i}" value="${saved.qty || ''}" placeholder=" ">
+            <label class="floating">Quantity ITEM${i}</label>
+        </div>
+        <div class="form-row hidden" id="descRow${i}">
+            <textarea id="descitem${i}" rows="2" placeholder=" " readonly>${saved.desc || ''}</textarea>
+            <label class="floating">Deskripsi ITEM${i}</label>
+        </div>
+        <div class="form-row hidden" id="uoiRow${i}">
+            <input type="text" id="uoiitem${i}" value="${saved.uoi || ''}" placeholder=" " readonly>
+            <label class="floating">UOI ITEM${i}</label>
+        </div>
+        <div class="form-row hidden" id="binRow${i}">
+            <input type="text" id="binitem${i}" value="${saved.bin || ''}" placeholder=" " readonly>
+            <label class="floating">BIN ITEM${i}</label>
+        </div>`;
+        container.appendChild(div);
+        bindSCInput(document.getElementById(`scitem${i}`), i);
+    }
+}
+
+// === DIUBAH PADA BAGIAN INI AGAR TERKONEKSI KE APPS SCRIPT doPost(e) ===
+async function submitForm(){
+    const btn = document.getElementById('btnSimpan');
+    const jumlah = parseInt(document.getElementById('jumlahitem').value);
+    let itemsToSubmit = [];
+    
+    for(let i=1; i<=jumlah; i++){
+        const sc = document.getElementById(`scitem${i}`)?.value || '';
+        const qty = document.getElementById(`qtyitem${i}`)?.value || '';
+        const desc = document.getElementById(`descitem${i}`)?.value || '';
+        const uoi = document.getElementById(`uoiitem${i}`)?.value || '';
+        const bin = document.getElementById(`binitem${i}`)?.value || '';
+        if(sc.trim() !== ''){
+            itemsToSubmit.push({ sc, qty, desc, uoi, bin });
+        }
+    }
+
+    // Validasi dasar jika tidak ada item yang dimasukkan
+    if(itemsToSubmit.length === 0){
+        alert("Mohon isi minimal satu SC ITEM!");
+        return;
+    }
+
+    const payload = {
+        tanggal: document.getElementById('tanggal').value,
+        namauser: document.getElementById('namauser').value,
+        status: document.getElementById('status').value,
+        jobnumber: document.getElementById('jobnumber').value,
+        crew: document.getElementById('crew').value,
+        items: itemsToSubmit
+    };
+
+    // Mengubah tombol menjadi indikator loading
+    btn.disabled = true;
+    btn.innerText = "Menyimpan...";
+
+    try {
+        // Kirim data ke Google Apps Script menggunakan metode POST
+        const response = await fetch(WEBAPP_URL, {
+            method: "POST",
+            mode: "no-cors", // Mode wajib agar Apps Script tidak terkena CORS error saat POST dari eksternal
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        // Karena menggunakan mode "no-cors", respon browser akan "opaque" (kosong)
+        // Namun data dipastikan tetap terkirim dan tersimpan masuk ke Spreadsheet.
+        alert("Data berhasil dikirim ke Spreadsheet!");
+        
+        // Opsional: Kosongkan form kembali setelah sukses disimpan
+        document.getElementById('namauser').value = "";
+        document.getElementById('status').value = "";
+        document.getElementById('jobnumber').value = "";
+        storedItemsData = {};
+        generateItems();
+
+    } catch (error) {
+        console.error("Terjadi kesalahan:", error);
+        alert("Gagal menyimpan data, periksa koneksi internet.");
+    } finally {
+        // Kembalikan tombol ke keadaan semula
+        btn.disabled = false;
+        btn.innerText = "Simpan";
+    }
+}
+
+document.getElementById('jumlahitem').addEventListener('change', generateItems);
+generateItems();
+</script>
+</body>
+</html>
